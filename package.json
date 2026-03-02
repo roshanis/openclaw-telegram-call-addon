@@ -1,6 +1,6 @@
 {
   "name": "telegram-call",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "OpenClaw Telegram /call command addon for Pipecat voice backend.",
   "license": "MIT",
   "repository": {
