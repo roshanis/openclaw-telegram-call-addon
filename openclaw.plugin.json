@@ -1,0 +1,11 @@
+{
+  "id": "telegram-call",
+  "name": "Telegram Call",
+  "description": "Registers /call to trigger the local Pipecat /call endpoint.",
+  "minOpenClawVersion": "2026.2",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}
