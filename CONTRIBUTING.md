@@ -7,7 +7,7 @@ Thanks for your interest in contributing.
 1. Fork this repository.
 2. Create a feature branch from `main`.
 3. Make your changes.
-4. Run tests: `node --test`
+4. Run tests: `node --test test/index.test.mjs`
 5. Open a pull request.
 
 ## Guidelines
@@ -16,6 +16,7 @@ Thanks for your interest in contributing.
 - Add tests for new behavior.
 - Do not commit `.env` files, API keys, tokens, or phone numbers.
 - Follow the existing code style (no build step, plain ESM).
+- Keep command behavior safe by default (no implicit outbound calls).
 
 ## Reporting Issues
 
