@@ -31,10 +31,11 @@ function allowedNumbers() {
 
 function usage(defaultTo) {
   const defaultLine = defaultTo
-    ? `\nDefault recipient: ${defaultTo} (used when no number is provided).`
+    ? `\nDefault recipient for /call me: ${defaultTo}.`
     : "";
   return [
     "Usage:",
+    "/call help",
     "/call <phone>",
     "/call call <phone>",
     "/call me",
@@ -64,7 +65,8 @@ async function healthStatus() {
   const speed = data?.voice?.speed || "unknown";
   const sig = data?.signatureValidation ? "on" : "off";
   const hasSecret = data?.callApiSecretSet ? "yes" : "no";
-  const twilioOk = data?.twilio?.matchesExpected === true ? "yes" : "no";
+  const twilioMatches = data?.twilio?.matchesExpected;
+  const twilioOk = twilioMatches === true ? "yes" : twilioMatches === false ? "no" : "unknown";
   const allowedSource = data?.callPolicy?.allowedSource || "any";
   const allowlistCount = Number(data?.callPolicy?.allowlistCount || 0);
   const kanbanPath = data?.kanban?.path || "(unknown)";
@@ -131,98 +133,108 @@ async function readKanbanBoard() {
 
 export default function register(api) {
   registerCallCommand(api, async (ctx) => {
-      const argsRaw = (ctx.args || "").trim();
-      const defaultTo = normalizePhone(process.env.TWILIO_TO_NUMBER || "");
-      const tokens = argsRaw.split(/\s+/).filter(Boolean);
-      if (tokens.length === 0 || tokens[0].toLowerCase() === "help") {
-        if (!defaultTo) return { text: usage(defaultTo) };
-      }
+    const argsRaw = (ctx.args || "").trim();
+    const defaultTo = normalizePhone(process.env.TWILIO_TO_NUMBER || "");
+    const tokens = argsRaw.split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) {
+      return { text: usage(defaultTo) };
+    }
+    if ((tokens[0] || "").toLowerCase() === "help") {
+      return { text: usage(defaultTo) };
+    }
 
-      let i = 0;
-      const first = (tokens[i] || "").toLowerCase();
-      if (first === "status") {
+    const first = (tokens[0] || "").toLowerCase();
+    if (first === "status") {
+      try {
+        return { text: await healthStatus() };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return { text: `Status failed: ${msg}` };
+      }
+    }
+    if (first === "speed") {
+      const next = tokens[1];
+      if (!next) {
         try {
           return { text: await healthStatus() };
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
-          return { text: `Status failed: ${msg}` };
+          return { text: `Speed check failed: ${msg}` };
         }
       }
-      if (first === "speed") {
-        const next = tokens[i + 1];
-        if (!next) {
-          try {
-            return { text: await healthStatus() };
-          } catch (err) {
-            const msg = err instanceof Error ? err.message : String(err);
-            return { text: `Speed check failed: ${msg}` };
-          }
-        }
-        const speed = Number(next);
-        if (!Number.isFinite(speed) || speed < 0.85 || speed > 1.15) {
-          return { text: "Usage: /call speed <0.85-1.15>" };
-        }
-        try {
-          return { text: await updateSpeed(Number(speed).toFixed(2)) };
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          return { text: `Speed update failed: ${msg}` };
-        }
+      const speed = Number(next);
+      if (!Number.isFinite(speed) || speed < 0.85 || speed > 1.15) {
+        return { text: "Usage: /call speed <0.85-1.15>" };
       }
-      if (first === "todo") {
-        const title = tokens.slice(i + 1).join(" ").trim();
-        if (!title) return { text: "Usage: /call todo <task>" };
-        try {
-          return { text: await addKanbanTask(title) };
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          return { text: `Kanban add failed: ${msg}` };
-        }
-      }
-      if (first === "board" || first === "kanban") {
-        try {
-          return { text: await readKanbanBoard() };
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          return { text: `Board read failed: ${msg}` };
-        }
-      }
-      if (first === "call" || first === "dial") i += 1;
-
-      let to = null;
-      if (tokens[i] && tokens[i].toLowerCase() === "me") {
-        to = defaultTo;
-        i += 1;
-      } else if (tokens[i]) {
-        to = normalizePhone(tokens[i]);
-        if (to) i += 1;
-      }
-
-      if (!to) to = defaultTo;
-      if (!to) return { text: usage(defaultTo) };
-      const allowlist = allowedNumbers();
-      if (allowlist.size > 0 && !allowlist.has(to)) {
-        return { text: `Call blocked: ${to} is not in PIPECAT_ALLOWED_NUMBERS.` };
-      }
-
       try {
-        const res = await fetch(DEFAULT_CALL_URL, {
-          method: "POST",
-          headers: buildHeaders(),
-          body: JSON.stringify({ to, source: "telegram" }),
-        });
-
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          const detail = typeof data?.detail === "string" ? data.detail : `HTTP ${res.status}`;
-          return { text: `Call failed: ${detail}` };
-        }
-
-        const callSid = typeof data?.callSid === "string" ? data.callSid : "(unknown)";
-        return { text: `Calling ${to}\nCall SID: ${callSid}` };
+        return { text: await updateSpeed(Number(speed).toFixed(2)) };
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        return { text: `Call failed: ${msg}` };
+        return { text: `Speed update failed: ${msg}` };
       }
+    }
+    if (first === "todo") {
+      const title = tokens.slice(1).join(" ").trim();
+      if (!title) return { text: "Usage: /call todo <task>" };
+      try {
+        return { text: await addKanbanTask(title) };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return { text: `Kanban add failed: ${msg}` };
+      }
+    }
+    if (first === "board" || first === "kanban") {
+      try {
+        return { text: await readKanbanBoard() };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return { text: `Board read failed: ${msg}` };
+      }
+    }
+
+    let i = 0;
+    if (first === "call" || first === "dial") i = 1;
+    if (!tokens[i]) {
+      return { text: usage(defaultTo) };
+    }
+
+    let to = null;
+    const targetToken = (tokens[i] || "").toLowerCase();
+    if (targetToken === "me") {
+      if (!defaultTo) {
+        return { text: "No default number configured. Set TWILIO_TO_NUMBER or use /call <phone>." };
+      }
+      to = defaultTo;
+    } else {
+      to = normalizePhone(tokens[i]);
+      if (!to) {
+        return { text: `Invalid phone number: ${tokens[i]}\n\n${usage(defaultTo)}` };
+      }
+    }
+
+    const allowlist = allowedNumbers();
+    if (allowlist.size > 0 && !allowlist.has(to)) {
+      return { text: `Call blocked: ${to} is not in PIPECAT_ALLOWED_NUMBERS.` };
+    }
+
+    try {
+      const res = await fetch(DEFAULT_CALL_URL, {
+        method: "POST",
+        headers: buildHeaders(),
+        body: JSON.stringify({ to, source: "telegram" }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const detail = typeof data?.detail === "string" ? data.detail : `HTTP ${res.status}`;
+        return { text: `Call failed: ${detail}` };
+      }
+
+      const callSid = typeof data?.callSid === "string" ? data.callSid : "(unknown)";
+      return { text: `Calling ${to}\nCall SID: ${callSid}` };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { text: `Call failed: ${msg}` };
+    }
   });
 }
