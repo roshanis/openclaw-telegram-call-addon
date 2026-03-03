@@ -13,6 +13,11 @@ cd openclaw-telegram-call-addon
 openclaw plugins install .
 ```
 
+Or from npm:
+```bash
+openclaw plugins install @roshanis/openclaw-telegram-call-addon
+```
+
 2. Configure environment in your OpenClaw runtime (`~/.openclaw/.env` or your service env):
 ```bash
 PIPECAT_CALL_URL=http://127.0.0.1:3334/call
@@ -76,6 +81,10 @@ Optional endpoints used by extra commands:
 |---|---|---|
 | 2026.2.x | 0.2.x | Tested |
 | 2026.3.x | 0.2.x | Unknown |
+
+## OpenClaw Listing
+
+- Showcase PR: https://github.com/openclaw/openclaw/pull/32502
 
 ## Security
 

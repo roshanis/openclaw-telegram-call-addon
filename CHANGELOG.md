@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.2 - 2026-03-03
+
+### Changed
+- Switched npm package name to `@roshanis/openclaw-telegram-call-addon` for unique publish scope.
+- Added npm install path in README for direct `openclaw plugins install` usage.
+- Added OpenClaw showcase PR link in README.
+
+### Compatibility
+- OpenClaw `2026.2.x`: tested.
+- OpenClaw `2026.3.x`: untested.
+
 ## 0.2.1 - 2026-03-02
 
 ### Added
